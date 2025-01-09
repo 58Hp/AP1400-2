@@ -231,3 +231,132 @@ Matrix algebra::inverse(const Matrix& matrix) {
 	}
 	return outMatrix;
 }
+
+Matrix algebra::concatenate(const Matrix& matrix1, const Matrix& matrix2, int axis) {
+	size_t n1 = matrix1.size();
+	size_t n2 = matrix2.size();
+	if (n1 == 0 && n2 == 0) {
+		return matrix1;
+	}
+	else if (n1 == 0 || n2 == 0) {
+		throw std::logic_error("存在空矩阵导致的无法连接！");
+	}
+	size_t m1 = matrix1[0].size();
+	size_t m2 = matrix2[0].size();
+	if (axis == 0) {
+		if (m1 != m2) {
+			throw std::logic_error("矩阵宽度不匹配，无法进行纵向连接！");
+		}
+		Matrix outMatrix(n1 + n2, std::vector<double>(m1));
+		for (int i = 0; i < n1; i++) {
+			for (int j = 0; j < m1; j++) {
+				outMatrix[i][j] = matrix1[i][j];
+			}
+		}
+		for (int i = 0; i < n2; i++) {
+			for (int j = 0; j < m2; j++) {
+				outMatrix[n1+i][j] = matrix2[i][j];
+			}
+		}
+		return outMatrix;
+	}
+	else if (axis == 1) {
+		if (n1 != n2) {
+			throw std::logic_error("矩阵高度不匹配，无法进行横向连接！");
+		}
+		Matrix outMatrix(n1, std::vector<double>(m1+m2));
+		for (int i = 0; i < n1; i++) {
+			for (int j = 0; j < m1; j++) {
+				outMatrix[i][j] = matrix1[i][j];
+			}
+		}
+		for (int i = 0; i < n2; i++) {
+			for (int j = 0; j < m2; j++) {
+				outMatrix[i][m1+j] = matrix2[i][j];
+			}
+		}
+		return outMatrix;
+	}
+	else {
+		throw std::logic_error("未知axis参数！");
+	}
+}
+
+Matrix algebra::ero_swap(const Matrix& matrix, size_t r1, size_t r2) {
+	size_t n = matrix.size();
+	if (n <= 0) {
+		throw std::logic_error("无法对空矩阵进行行操作！");
+	}
+	if (r1 == r2) {
+		return matrix;
+	}
+	else if (r1 < 0 || r1 >= n || r2 < 0 || r2 >= n) {
+		throw std::logic_error("矩阵不包含此行！");
+	}
+	size_t m = matrix[0].size();
+	Matrix outMatrix{matrix};
+	outMatrix[r1].swap(outMatrix[r2]);
+	return outMatrix;
+}
+
+Matrix algebra::ero_multiply(const Matrix& matrix, size_t r, double c) {
+	size_t n = matrix.size();
+	if (n <= 0) {
+		return matrix;
+	}
+	if (r < 0 || r >= n) {
+		throw std::logic_error("矩阵不包含此行！");
+	}
+	size_t m = matrix[0].size();
+	Matrix outMatrix{ matrix };
+	for (int i = 0; i < m; i++) {
+		outMatrix[r][i] *= c;
+	}
+	return outMatrix;
+}
+
+Matrix algebra::ero_sum(const Matrix& matrix, size_t r1, double c, size_t r2) {
+	size_t n = matrix.size();
+	if (n <= 0) {
+		throw std::logic_error("无法对空矩阵进行行操作！");
+	}
+	if (r1 == r2) {
+		return matrix;
+	}
+	else if (r1 < 0 || r1 >= n || r2 < 0 || r2 >= n) {
+		throw std::logic_error("矩阵不包含此行！");
+	}
+	size_t m = matrix[0].size();
+	Matrix outMatrix{ matrix };
+	for (int i = 0; i < m; i++) {
+		outMatrix[r2][i] += outMatrix[r1][i]*c;
+	}
+	return outMatrix;
+}
+
+Matrix algebra::upper_triangular(const Matrix& matrix) {
+	size_t n = matrix.size();
+	if (n <= 0) {
+		return matrix;
+	}
+	size_t m = matrix[0].size();
+	if (m != n) {
+		throw std::logic_error("此矩阵不存在上三角矩阵！");
+	}
+	Matrix outMatrix{ matrix };
+	for (int i = 0; i < n && i < m ; i++) {//每次以一行为单位处理
+		if (outMatrix[i][i] == 0) {//行首元素为0，找行首元素非零行交换，如果全为0则不处理
+			int j;
+			//找行首元素非零行交换
+			for (j = i+1; j < n; j++) {
+				if (outMatrix[j][i] != 0) break;
+			}
+			if (j == n)continue;//未找到可交换的行
+			outMatrix = algebra::ero_swap(outMatrix, i, j);
+		}
+		for (int j = i+1; j < n; j++) {
+			outMatrix = algebra::ero_sum(outMatrix,i,-outMatrix[j][i]/outMatrix[i][i], j);
+		}
+	}
+	return outMatrix;
+}
